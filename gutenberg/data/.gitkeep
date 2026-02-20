@@ -1,0 +1,2 @@
+# Place embedding_datasets.pkl here (download from Google Drive - see README)
+# Or after running get_data + process_data: raw/, text/, tokens/ will appear here

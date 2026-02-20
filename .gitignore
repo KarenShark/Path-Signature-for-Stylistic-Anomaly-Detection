@@ -1,0 +1,24 @@
+# Data (large files)
+gutenberg/data/raw/
+gutenberg/data/text/
+gutenberg/data/tokens/
+gutenberg/data/embedding_datasets.pkl
+gutenberg/data/.mirror/
+*.pkl
+*.zarr
+*.npz
+
+# Virtual env
+path_signature_env/
+venv/
+.venv/
+
+# Logs & temp (keep process.log, test_quick.log, process_progress_sample.log)
+*.pid
+__pycache__/
+.ipynb_checkpoints/
+gutenberg/data_download/*.log
+
+# IDE
+.vscode/
+.idea/

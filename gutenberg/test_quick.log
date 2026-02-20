@@ -1,0 +1,96 @@
+============================================================
+开始并行下载 Gutenberg 数据集
+============================================================
+目标目录: data/.mirror/
+并行 Worker 数: 2
+每个 Worker 缓冲区大小: 128 MB
+总缓冲区大小: 256 MB
+下载模式限制: 1[0-9]* (仅下载匹配此模式的书籍)
+已存在: 0.00 B (0 个文件)
+rsync 将自动跳过已存在的文件（断点续传）
+============================================================
+
+Worker 分配:
+  Worker 1: 书籍编号 1[0-9]*
+  Worker 2: 书籍编号 1[0-9]*
+
+启动并行下载进程...
+日志文件: download_parallel.log (追加模式)
+
+Worker 1 已启动 (PID: 31527, 模式: 1[0-9]*, 缓冲区: 128MB)
+Worker 2 已启动 (PID: 31528, 模式: 1[0-9]*, 缓冲区: 128MB)
+
+============================================================
+所有 Worker 已启动，等待完成...
+提示: 按 Ctrl+C 可以安全停止所有进程
+============================================================
+
+Worker 1 ❌ 错误 (退出码: 1)
+Worker 2 ❌ 错误 (退出码: 1)
+
+⚠️  部分 Worker 出现错误，但已下载的文件已保存
+
+============================================================
+rsync 同步完成
+最终大小: 0.00 B (0 个文件)
+============================================================
+
+检查重复文件...
+从 mirror 目录创建 raw 文件...
+更新元数据...
+Traceback (most recent call last):
+  File "/home/vt_ai_test1/KarenHE/signature_applications/natural_language_processing/gutenberg/src/metadataparser.py", line 143, in getrdfdata
+    _, _ = urllib.request.urlretrieve(RDFURL, RDFFILES)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 280, in urlretrieve
+    raise ContentTooShortError(
+urllib.error.ContentTooShortError: <urlopen error retrieval incomplete: got only 1284128 out of 124280549 bytes>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 1348, in do_open
+    h.request(req.get_method(), req.selector, req.data, headers,
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/http/client.py", line 1283, in request
+    self._send_request(method, url, body, headers, encode_chunked)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/http/client.py", line 1329, in _send_request
+    self.endheaders(body, encode_chunked=encode_chunked)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/http/client.py", line 1278, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/http/client.py", line 1038, in _send_output
+    self.send(msg)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/http/client.py", line 976, in send
+    self.connect()
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/http/client.py", line 942, in connect
+    self.sock = self._create_connection(
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/socket.py", line 824, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/socket.py", line 955, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno -2] Name or service not known
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/vt_ai_test1/KarenHE/signature_applications/natural_language_processing/gutenberg/get_data_parallel.py", line 342, in <module>
+    make_df_metadata(
+  File "/home/vt_ai_test1/KarenHE/signature_applications/natural_language_processing/gutenberg/src/metadataparser.py", line 71, in make_df_metadata
+    md = readmetadata(path_xml, update=update)
+  File "/home/vt_ai_test1/KarenHE/signature_applications/natural_language_processing/gutenberg/src/metadataparser.py", line 118, in readmetadata
+    for xml in getrdfdata(RDFFILES, update=update):
+  File "/home/vt_ai_test1/KarenHE/signature_applications/natural_language_processing/gutenberg/src/metadataparser.py", line 147, in getrdfdata
+    _, _ = urllib.request.urlretrieve(RDFURL, RDFFILES)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 241, in urlretrieve
+    with contextlib.closing(urlopen(url, data)) as fp:
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 216, in urlopen
+    return opener.open(url, data, timeout)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 519, in open
+    response = self._open(req, data)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 536, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 496, in _call_chain
+    result = func(*args)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 1377, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+  File "/home/vt_ai_test1/mamba-envs/ml/lib/python3.10/urllib/request.py", line 1351, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno -2] Name or service not known>
