@@ -2,145 +2,66 @@
 
 **Author anomaly detection** on Project Gutenberg: given a text, determine whether it was written by an author seen in training or by an unseen "impostor." Uses **RoBERTa stream embeddings** → **UMAP/Random Projection** → **Path Signatures** → **Isolation Forest**.
 
----
-
-## Contents
-
-- [What This Experiment Does](#what-this-experiment-does-summary)
-- [Quick Start (Precomputed Data)](#quick-start-precomputed-data)
-- [Precomputed Data Options](#precomputed-data-options)
-- [Full Pipeline (From Scratch)](#full-pipeline-from-scratch)
-- [Experiment Details](#experiment-details)
-- [Reproduced Results](#reproduced-results)
-- [Output Figures](#output-figures)
-- [Project Structure](#project-structure)
-- [References](#references)
+**Reference**: [Sequential-Path-Signature-Neural-Network](https://github.com/KarenShark/Sequential-Path-Signature-Neural-Network)
 
 ---
 
-## What This Experiment Does (Summary)
+## What the Experiment Does
 
-**Task**: Given a book, classify as **normal** (known authors) or **impostor** (Margaret Oliphant, held out).
-
-### Pipeline (ML perspective)
-
-![Pipeline Overview](output/pipeline_overview.svg)
-
-| Stage | Input | Output |
-|-------|-------|--------|
-| **Data** | PG books | 10 chunks x 512 tokens per book |
-| **Embeddings** | Chunks | RoBERTa to (512, 1024) stream |
-| **Projection** | Stream | UMAP/RP to 2d or 4d path |
-| **Features** | Path | Path signature (levels 1-4) |
-| **Train** | Normal signatures | Isolation Forest |
-| **Eval** | Impostor + normal | ROC AUC |
-
-
-### Configs
-
-| Config | Top-K | Projection | Dim |
-|--------|-------|------------|-----|
-| dataset0 | 250 | UMAP | 4 |
-| dataset1 | 100 | UMAP | 2 |
-| dataset2 | 100 | Random Projection | 2 |
-| dataset3 | 250 | Random Projection | 4 |
+1. **Data**: Project Gutenberg (English books). Normal = authors with ≥10 books; Impostor = Margaret Oliphant (held-out author).
+2. **Embeddings**: RoBERTa-large encodes 10 chunks (512 tokens each) per book → stream embeddings (512×1024 per chunk).
+3. **Dimensionality reduction**: UMAP or Random Projection, with Top-K token masking (K=100 or 250).
+4. **Path signatures**: Truncation levels 1–4 on projected paths.
+5. **Anomaly detection**: Isolation Forest on signatures; KS test aggregates scores across chunks per book; ROC AUC evaluates impostor vs. normal.
 
 ---
 
-## Quick Start (Precomputed Data)
-
-**Run the notebook in ~5 minutes** if you have `embedding_datasets.pkl`:
-
-1. **Clone and setup**
-   ```bash
-   git clone https://github.com/KarenShark/Path-Signature_Anomaly-Detection.git
-   cd Path-Signature_Anomaly-Detection
-   python -m venv venv
-   source venv/bin/activate   # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   pip install -r requirements_torch.txt   # or: pip install torch from pytorch.org
-   ```
-
-2. **Obtain precomputed data** (~14 GB) — see [Precomputed Data Options](#precomputed-data-options) below.
-
-3. **Run the notebook**
-   ```bash
-   jupyter notebook nlp_demo.ipynb
-   ```
-   Run all cells; the notebook loads `embedding_datasets.pkl` and skips training. Figures are saved to `output/`.
-
----
-
-## Precomputed Data Options
-
-`embedding_datasets.pkl` (~14 GB) cannot be hosted on GitHub.
-
-**Download from Zenodo** (recommended):
-
-- **URL**: [https://zenodo.org/record/18710797](https://zenodo.org/record/18710797)
-- **DOI**: [10.5281/zenodo.18710797](https://doi.org/10.5281/zenodo.18710797)
-
-Place the file at `gutenberg/data/embedding_datasets.pkl` after download.
-
----
-
-## Full Pipeline (From Scratch)
-
-**Requires GPU** for embeddings (~several hours).
+## Setup
 
 ### 1. Environment
 
 ```bash
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate   # Linux/Mac; on Windows: venv\Scripts\activate
+
 pip install -r requirements.txt
-pip install -r requirements_torch.txt
+pip install -r requirements_torch.txt   # or install PyTorch from https://pytorch.org
 ```
 
 **Key deps**: `iisignature`, `transformers`, `torch`, `umap-learn`, `scikit-learn`, `zarr`, `pandas`, `matplotlib`.
 
-### 2. Download Gutenberg corpus
+### 2. Data
 
 ```bash
 cd gutenberg
 pip install -r requirements.txt
-python data_download/get_data.py    # rsync download (~hours)
-python process_data.py              # strip headers, tokenize → text/, tokens/, counts/
+python get_data.py        # Download PG corpus (rsync)
+python process_data.py    # Strip headers, tokenize → text/, tokens/, counts/
 ```
 
-### 3. Compute embeddings (GPU required)
+### 3. Embeddings (GPU recommended)
 
-Run `compute_all_embeddings()` in the notebook or `./run_compute_embeddings.sh`. Set `EMBEDDINGS_PATH` to the output directory (zarr + `successful_embeddings.csv`).
+- Set `DATASET_PATH` and `EMBEDDINGS_PATH` in the notebook.
+- Run `compute_all_embeddings()` in `nlp_demo.ipynb` (or use a background script).
+- Output: zarr arrays + `successful_embeddings.csv` under `EMBEDDINGS_PATH`.
 
-### 4. Run notebook
+### 4. Optional: Precomputed datasets
 
-Open `nlp_demo.ipynb`, set paths if needed, run all cells in order.
+If `gutenberg/data/embedding_datasets.pkl` exists, the notebook can load it to skip dataset construction.
 
 ---
 
-## Experiment Details
+## How to Run
 
-### Data and splits
+1. Open `nlp_demo.ipynb`.
+2. Set `DATASET_PATH` (path to `gutenberg/` with `metadata/` and `data/`).
+3. Set `EMBEDDINGS_PATH` (where embeddings zarr and `successful_embeddings.csv` live).
+4. Run cells in order: imports → load metadata → partition → create Datasets → `compute_mean` → train UMAP/MLP (for UMAP configs) → `project_embeddings` → token frequencies → encodings plots → anomaly evaluation → ROC plots.
+5. Figures are saved to `output/`.
 
-- **Corpus**: Project Gutenberg (English only).
-- **Normal**: Authors with ≥10 books; train/eval split (one book per author in eval).
-- **Impostor**: Margaret Oliphant, held out entirely.
+---
 
-### Embeddings and paths
-
-- Each book: middle 5120 tokens → 10 chunks of 512.
-- RoBERTa-large: each chunk → (512, 1024) stream embedding.
-- **Token mask**: Keep only positions of the Top‑K most frequent tokens in training.
-- **Projection**: UMAP (fit on 2000 chunks, MLP for new data) or Random Projection to 2d/4d.
-- Each chunk → one path; path signature at levels 1–4.
-
-### Anomaly detection
-
-- Isolation Forest on normal signatures.
-- Per‑book: KS test between normal and impostor score distributions → p‑value as anomaly score.
-- ROC AUC: impostor vs. normal.
-
-### Configurations
+## Dataset Configurations
 
 | Config   | Top-K | Reduction        | Dim |
 |----------|-------|------------------|-----|
@@ -168,76 +89,58 @@ Open `nlp_demo.ipynb`, set paths if needed, run all cells in order.
 
 ---
 
+## Data Flow and Drop Reasons
+
+Pipeline data counts (verified from `nlp_demo.ipynb` and troubleshoot):
+
+| Stage | Count | Dropped | Drop reason |
+|-------|------:|--------:|-------------|
+| Metadata (all) | 77,640 | — | — |
+| Author not null | 74,743 | 2,897 | No author in metadata |
+| English only | 59,127 | 15,616 | Non-English (`language != ['en']`) |
+| With embeddings | 34,789 | 24,338 | See breakdown below |
+| **Partition** | | | |
+| df_normal_train | 34,147 | — | Normal authors, excl. eval |
+| df_normal_eval | 510 | — | 1 per author (≥10 books) |
+| df_impostor | 132 | — | Margaret Oliphant |
+
+**Breakdown of 24,338 dropped (English metadata → embeddings):**
+
+| Reason | Count | % of dropped |
+|--------|------:|--------------:|
+| No text/tokens in corpus | 22,796 | 93.7% |
+| Has text/tokens, no embedding | 1,542 | 6.3% |
+
+- **22,796**: Book in metadata but not in `data/text` or `data/tokens`. Standardised PG Corpus is a subset; `get_data.py` / `process_data.py` do not produce files for all metadata entries.
+- **1,542**: Text/tokens exist but embedding failed. Typical causes: token length < 5,120 (need 10×512 for chunks), or other `compute_embeddings` errors. Sample: dropped-with-tokens mean ≈2,213 tokens vs kept mean ≈67,909.
+
+---
+
 ## Output Figures
 
-### 1. token_frequencies.png
-
-Ranked token frequencies in the training corpus (Top 250). Zipf-like distribution; steep drop justifies Top‑K masking.
+| Figure | Description |
+|--------|-------------|
+| `token_frequencies.png` | Token frequency distribution |
+| `encodings_dataset1_umap.png` | UMAP 2D projection (dataset1, K=100) |
+| `encodings_dataset2_random_proj.png` | Random Projection 2D (dataset2, K=100) |
+| `roc_dataset0_no_projection.png` | ROC curves for dataset0 (UMAP K=250, 4d) |
+| `roc_dataset1_no_projection.png` | ROC curves for dataset1 (UMAP K=100, 2d) |
+| `roc_dataset2_no_projection.png` | ROC curves for dataset2 (RP K=100, 2d) |
+| `roc_dataset3_no_projection.png` | ROC curves for dataset3 (RP K=250, 4d) |
 
 ![Token Frequencies](output/token_frequencies.png)
 
----
-
-### 2. encodings_dataset1_umap.png
-
-2D UMAP projection of stream embeddings (dataset1: K=100, UMAP 2d). Points colored by dominant token. Same-token points cluster; KNN fidelity ~0.955.
-
 ![UMAP Encodings Dataset1](output/encodings_dataset1_umap.png)
-
----
-
-### 3. encodings_dataset2_random_proj.png
-
-2D Random Projection of stream embeddings (dataset2: K=100, RP 2d). Same coloring. RP is cheaper than UMAP; structure noisier.
 
 ![Random Projection Encodings Dataset2](output/encodings_dataset2_random_proj.png)
 
----
+![ROC Dataset0](output/roc_dataset0_no_projection.png)
 
-### 4. ROC curves (dataset0–3)
+![ROC Dataset1](output/roc_dataset1_no_projection.png)
 
-Each figure: ROC curves at signature levels 1–4 (subplots). X=FPR, Y=TPR. Legend shows IsoFor AUC. Higher AUC = better impostor vs normal separation.
+![ROC Dataset2](output/roc_dataset2_no_projection.png)
 
-| Figure | Config | Top-K | Reduction | Dim |
-|--------|--------|-------|-----------|-----|
-| roc_dataset0_no_projection.png | dataset0 | 250 | UMAP | 4 |
-| roc_dataset1_no_projection.png | dataset1 | 100 | UMAP | 2 |
-| roc_dataset2_no_projection.png | dataset2 | 100 | Random Projection | 2 |
-| roc_dataset3_no_projection.png | dataset3 | 250 | Random Projection | 4 |
-
-![ROC Dataset0](output/roc_dataset0_no_projection.png)  
-*dataset0: UMAP K=250, 4d*
-
-![ROC Dataset1](output/roc_dataset1_no_projection.png)  
-*dataset1: UMAP K=100, 2d*
-
-![ROC Dataset2](output/roc_dataset2_no_projection.png)  
-*dataset2: Random Projection K=100, 2d*
-
-![ROC Dataset3](output/roc_dataset3_no_projection.png)  
-*dataset3: Random Projection K=250, 4d*
-
----
-
-## Project Structure
-
-```
-Path-Signature_Anomaly-Detection/
-├── nlp_demo.ipynb           # Main notebook
-├── requirements.txt
-├── requirements_torch.txt
-├── output/                  # Figures
-├── gutenberg/
-│   ├── metadata/metadata.csv
-│   ├── data/                # embedding_datasets.pkl or raw/text after pipeline
-│   ├── get_data.py
-│   ├── process_data.py
-│   ├── data_download/
-│   └── src/
-├── compute_all_embeddings.py
-├── run_compute_embeddings.sh
-└── PIPELINE_SUMMARY.md
-```
+![ROC Dataset3](output/roc_dataset3_no_projection.png)
 
 ---
 
@@ -252,6 +155,40 @@ raw (.txt) → text (.txt) → compute_embeddings (RoBERTa) → embeddings zarr
                                     ↓
     Path Signature (level 1–4) → Isolation Forest → ROC AUC
 ```
+
+---
+
+## Project Structure
+
+```
+natural_language_processing/
+├── nlp_demo.ipynb
+├── requirements.txt
+├── requirements_torch.txt
+├── output/
+│   ├── token_frequencies.png
+│   ├── encodings_dataset1_umap.png
+│   ├── encodings_dataset2_random_proj.png
+│   ├── roc_dataset0_no_projection.png
+│   ├── roc_dataset1_no_projection.png
+│   ├── roc_dataset2_no_projection.png
+│   └── roc_dataset3_no_projection.png
+├── gutenberg/
+│   ├── get_data.py
+│   ├── process_data.py
+│   └── data/
+└── PIPELINE_SUMMARY.md
+```
+
+---
+
+## Reflection on Results
+
+- **AUC 0.71–0.84** is moderate for author anomaly detection. Higher K (250) and level-3 signatures generally improve performance; dataset3 (RP, K=250) reaches ~0.84.
+- **UMAP vs Random Projection**: UMAP preserves structure better (KNN ~0.955) but RP is cheaper. AUC differences between them are modest.
+- **Level 3 vs 4**: Level 3 often suffices; level 4 adds features but can overfit on limited data.
+- **100 vs 250 tokens**: 250 tokens yields clearly better AUC (e.g. 92% vs 69% in the notebook for one config), as expected from richer paths.
+- **Conclusion**: The pipeline is sound. Results are consistent with the reference: path signatures on RoBERTa streams can separate impostor authors, with performance depending on token count and signature level.
 
 ---
 
