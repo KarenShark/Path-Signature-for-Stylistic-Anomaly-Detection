@@ -6,6 +6,22 @@
 
 ---
 
+## Contents
+
+- [What the Experiment Does](#what-the-experiment-does)
+- [Setup](#setup)
+- [How to Run](#how-to-run)
+- [Dataset Configurations](#dataset-configurations)
+- [Reproduced Results](#reproduced-results)
+- [Data Flow and Drop Reasons](#data-flow-and-drop-reasons)
+- [Output Figures](#output-figures)
+- [Pipeline Overview](#pipeline-overview)
+- [Project Structure](#project-structure)
+- [Reflection on Results](#reflection-on-results)
+- [References](#references)
+
+---
+
 ## What the Experiment Does
 
 1. **Data**: Project Gutenberg (English books). Normal = authors with ≥10 books; Impostor = Margaret Oliphant (held-out author).
@@ -118,21 +134,44 @@ Pipeline data counts (verified from `nlp_demo.ipynb` and troubleshoot):
 
 ## Output Figures
 
-| Figure | Description |
-|--------|-------------|
-| `token_frequencies.png` | Token frequency distribution |
-| `encodings_dataset1_umap.png` | UMAP 2D projection (dataset1, K=100) |
-| `encodings_dataset2_random_proj.png` | Random Projection 2D (dataset2, K=100) |
-| `roc_dataset0_no_projection.png` | ROC curves for dataset0 (UMAP K=250, 4d) |
-| `roc_dataset1_no_projection.png` | ROC curves for dataset1 (UMAP K=100, 2d) |
-| `roc_dataset2_no_projection.png` | ROC curves for dataset2 (RP K=100, 2d) |
-| `roc_dataset3_no_projection.png` | ROC curves for dataset3 (RP K=250, 4d) |
+| File | Config | Content |
+|------|--------|---------|
+| `token_frequencies.png` | — | Top-K token rank vs frequency (Zipf); justifies masking |
+| `encodings_dataset1_umap.png` | dataset1 (K=100, UMAP 2d) | 2D UMAP of stream embeddings; color = dominant token; KNN fidelity ~0.955 |
+| `encodings_dataset2_random_proj.png` | dataset2 (K=100, RP 2d) | 2D RP of stream embeddings; same coloring; cheaper, noisier than UMAP |
+| `roc_dataset0_no_projection.png` | dataset0 (K=250, UMAP 4d) | ROC curves (levels 1–4); X=FPR, Y=TPR; best AUC ~0.84 |
+| `roc_dataset1_no_projection.png` | dataset1 (K=100, UMAP 2d) | ROC curves (levels 1–4); AUC ~0.71–0.77 |
+| `roc_dataset2_no_projection.png` | dataset2 (K=100, RP 2d) | ROC curves (levels 1–4); weakest AUC ~0.35 |
+| `roc_dataset3_no_projection.png` | dataset3 (K=250, RP 4d) | ROC curves (levels 1–4); AUC ~0.72–0.75 |
+
+### 1. Token Frequencies
+
+Ranked token frequencies in training corpus. Steep Zipf drop justifies Top-K masking.
 
 ![Token Frequencies](output/token_frequencies.png)
 
+### 2. UMAP Encodings (dataset1)
+
+2D UMAP projection of stream embeddings. Points colored by dominant token; same-token clusters → KNN fidelity ~0.955.
+
 ![UMAP Encodings Dataset1](output/encodings_dataset1_umap.png)
 
+### 3. Random Projection Encodings (dataset2)
+
+2D RP of stream embeddings. Same coloring; cheaper than UMAP, structure noisier.
+
 ![Random Projection Encodings Dataset2](output/encodings_dataset2_random_proj.png)
+
+### 4. ROC Curves (dataset0–3)
+
+Each figure: 4 subplots (signature levels 1–4). X=FPR, Y=TPR. Legend shows IsoFor AUC. Higher AUC = better impostor vs normal separation.
+
+| Figure | Config | Top-K | Reduction | Dim |
+|--------|--------|-------|-----------|-----|
+| roc_dataset0 | dataset0 | 250 | UMAP | 4 |
+| roc_dataset1 | dataset1 | 100 | UMAP | 2 |
+| roc_dataset2 | dataset2 | 100 | Random Projection | 2 |
+| roc_dataset3 | dataset3 | 250 | Random Projection | 4 |
 
 ![ROC Dataset0](output/roc_dataset0_no_projection.png)
 
@@ -161,7 +200,7 @@ raw (.txt) → text (.txt) → compute_embeddings (RoBERTa) → embeddings zarr
 ## Project Structure
 
 ```
-natural_language_processing/
+Path-Signature_Anomaly-Detection/
 ├── nlp_demo.ipynb
 ├── requirements.txt
 ├── requirements_torch.txt
