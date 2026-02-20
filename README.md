@@ -4,9 +4,19 @@
 
 ---
 
-## Quick Start (Recommended: Use Precomputed Data)
+## What This Experiment Does (Summary)
 
-**Run the notebook in under 5 minutes** if you have the precomputed `embedding_datasets.pkl`:
+We treat **text as a path in embedding space** and use **path signatures** as features for anomaly detection. The task: given a book, decide if it was written by a known author (normal) or by Margaret Oliphant (impostor, held out from training).
+
+**Pipeline**: (1) RoBERTa encodes each book’s middle 10 chunks (512 tokens each) → 1024‑dim stream embeddings. (2) We mask to the Top‑K most frequent tokens (K=100 or 250) and reduce dimension with UMAP or Random Projection to 2d/4d. (3) Each chunk becomes a path; we compute path signatures at levels 1–4. (4) Isolation Forest is trained on normal signatures; KS test aggregates scores per book; ROC AUC measures impostor vs. normal separation.
+
+**Four configs**: dataset0 (UMAP, K=250, 4d), dataset1 (UMAP, K=100, 2d), dataset2 (Random Projection, K=100, 2d), dataset3 (Random Projection, K=250, 4d). We compare UMAP vs Random Projection and K=100 vs K=250.
+
+---
+
+## Quick Start (Precomputed Data)
+
+**Run the notebook in ~5 minutes** if you have `embedding_datasets.pkl`:
 
 1. **Clone and setup**
    ```bash
@@ -18,23 +28,41 @@
    pip install -r requirements_torch.txt   # or: pip install torch from pytorch.org
    ```
 
-2. **Download precomputed data** (Google Drive link TBD – will be added here)
-   - Download `embedding_datasets.pkl` (~14 GB)
-   - Place it in `gutenberg/data/embedding_datasets.pkl`
+2. **Obtain precomputed data** (~14 GB) — see [Precomputed Data Options](#precomputed-data-options) below.
 
 3. **Run the notebook**
    ```bash
    jupyter notebook nlp_demo.ipynb
    ```
-   - Run all cells from top to bottom
-   - The notebook will load from `embedding_datasets.pkl` and skip training
-   - Figures are saved to `output/`
+   Run all cells; the notebook loads `embedding_datasets.pkl` and skips training. Figures are saved to `output/`.
+
+---
+
+## Precomputed Data Options
+
+`embedding_datasets.pkl` (~14 GB) cannot be hosted on GitHub.
+
+**Download from Zenodo** (recommended):
+
+- **URL**: [https://zenodo.org/record/18710797](https://zenodo.org/record/18710797)
+- **DOI**: [10.5281/zenodo.18710797](https://doi.org/10.5281/zenodo.18710797)
+
+Place the file at `gutenberg/data/embedding_datasets.pkl` after download.
+
+**Other options**:
+
+| Option | How | Notes |
+|--------|-----|-------|
+| **Zenodo** | Upload at [zenodo.org](https://zenodo.org); get DOI; add download link to README | Free, 50 GB/record, persistent DOI |
+| **Hugging Face Hub** | Create dataset repo; `huggingface-cli upload` | Free, good for ML datasets |
+| **Split + merge** | `split -b 500M embedding_datasets.pkl part_`; upload parts to Drive/Dropbox; provide `cat part_* > embedding_datasets.pkl` | Works with any cloud storage |
+| **Full pipeline** | Run get_data → process_data → compute_embeddings (GPU, ~hours) | No precomputed file needed |
 
 ---
 
 ## Full Pipeline (From Scratch)
 
-If you do not have the precomputed data, run the full pipeline. **Requires GPU** for embeddings (~several hours).
+**Requires GPU** for embeddings (~several hours).
 
 ### 1. Environment
 
@@ -52,39 +80,43 @@ pip install -r requirements_torch.txt
 ```bash
 cd gutenberg
 pip install -r requirements.txt
-python data_download/get_data.py    # or: python get_data.py (rsync download, ~hours)
+python data_download/get_data.py    # rsync download (~hours)
 python process_data.py              # strip headers, tokenize → text/, tokens/, counts/
 ```
 
 ### 3. Compute embeddings (GPU required)
 
-In the notebook or via script:
-
-```bash
-# Option A: run in notebook – execute the compute_all_embeddings() cell
-# Option B: background script
-./run_compute_embeddings.sh
-```
-
-Set `EMBEDDINGS_PATH` in the notebook to where embeddings are saved (zarr + `successful_embeddings.csv`).
+Run `compute_all_embeddings()` in the notebook or `./run_compute_embeddings.sh`. Set `EMBEDDINGS_PATH` to the output directory (zarr + `successful_embeddings.csv`).
 
 ### 4. Run notebook
 
-Open `nlp_demo.ipynb`, set paths if needed, and run all cells in order.
+Open `nlp_demo.ipynb`, set paths if needed, run all cells in order.
 
 ---
 
-## What the Experiment Does
+## Experiment Details
 
-1. **Data**: Project Gutenberg (English books). Normal = authors with ≥10 books; Impostor = Margaret Oliphant (held-out author).
-2. **Embeddings**: RoBERTa-large encodes 10 chunks (512 tokens each) per book → stream embeddings (512×1024 per chunk).
-3. **Dimensionality reduction**: UMAP or Random Projection, with Top-K token masking (K=100 or 250).
-4. **Path signatures**: Truncation levels 1–4 on projected paths.
-5. **Anomaly detection**: Isolation Forest on signatures; KS test aggregates scores across chunks per book; ROC AUC evaluates impostor vs. normal.
+### Data and splits
 
----
+- **Corpus**: Project Gutenberg (English only).
+- **Normal**: Authors with ≥10 books; train/eval split (one book per author in eval).
+- **Impostor**: Margaret Oliphant, held out entirely.
 
-## Dataset Configurations
+### Embeddings and paths
+
+- Each book: middle 5120 tokens → 10 chunks of 512.
+- RoBERTa-large: each chunk → (512, 1024) stream embedding.
+- **Token mask**: Keep only positions of the Top‑K most frequent tokens in training.
+- **Projection**: UMAP (fit on 2000 chunks, MLP for new data) or Random Projection to 2d/4d.
+- Each chunk → one path; path signature at levels 1–4.
+
+### Anomaly detection
+
+- Isolation Forest on normal signatures.
+- Per‑book: KS test between normal and impostor score distributions → p‑value as anomaly score.
+- ROC AUC: impostor vs. normal.
+
+### Configurations
 
 | Config   | Top-K | Reduction        | Dim |
 |----------|-------|------------------|-----|
@@ -114,25 +146,49 @@ Open `nlp_demo.ipynb`, set paths if needed, and run all cells in order.
 
 ## Output Figures
 
-| Figure | Description |
-|--------|-------------|
-| `token_frequencies.png` | Token frequency distribution |
-| `encodings_dataset1_umap.png` | UMAP 2D projection (dataset1, K=100) |
-| `encodings_dataset2_random_proj.png` | Random Projection 2D (dataset2, K=100) |
-| `roc_dataset0_no_projection.png` | ROC curves for dataset0 |
-| `roc_dataset1_no_projection.png` | ROC curves for dataset1 |
-| `roc_dataset2_no_projection.png` | ROC curves for dataset2 |
-| `roc_dataset3_no_projection.png` | ROC curves for dataset3 |
+### token_frequencies.png
+
+**What it shows**: Ranked token frequencies in the training corpus (Top 250).
+
+**Interpretation**: Zipf-like distribution; the steep drop justifies using Top‑K masking. Tokens beyond ~100–250 add little signal.
 
 ![Token Frequencies](output/token_frequencies.png)
 
-![UMAP Encodings](output/encodings_dataset1_umap.png)
+---
 
-![Random Projection Encodings](output/encodings_dataset2_random_proj.png)
+### encodings_dataset1_umap.png
+
+**What it shows**: 2D UMAP projection of stream embeddings (dataset1: K=100, UMAP 2d). Points are colored by the dominant token at each position.
+
+**Interpretation**: Same-token points cluster; UMAP preserves local structure. KNN accuracy ~0.955 indicates good fidelity. This supports using path signatures on these projections.
+
+![UMAP Encodings Dataset1](output/encodings_dataset1_umap.png)
+
+---
+
+### encodings_dataset2_random_proj.png
+
+**What it shows**: 2D Random Projection of stream embeddings (dataset2: K=100, RP 2d). Same coloring as above.
+
+**Interpretation**: RP is linear and cheaper than UMAP; structure is noisier. Serves as a baseline to compare with UMAP.
+
+![Random Projection Encodings Dataset2](output/encodings_dataset2_random_proj.png)
+
+---
+
+### roc_dataset0_no_projection.png … roc_dataset3_no_projection.png
+
+**What they show**: ROC curves for each dataset at signature levels 1–4. X-axis: false positive rate; Y-axis: true positive rate. Each subplot = one level; legend shows IsoFor (Isolation Forest) AUC.
+
+**Interpretation**: Higher AUC = better impostor vs. normal separation. dataset3 (RP, K=250, 4d) reaches ~0.84 at level 3; dataset2 (RP, K=100) is weaker (~0.69) due to fewer tokens. Level 3 often outperforms level 1–2; level 4 can overfit.
 
 ![ROC Dataset0](output/roc_dataset0_no_projection.png)
 
+![ROC Dataset1](output/roc_dataset1_no_projection.png)
+
 ![ROC Dataset2](output/roc_dataset2_no_projection.png)
+
+![ROC Dataset3](output/roc_dataset3_no_projection.png)
 
 ---
 
@@ -146,7 +202,7 @@ Path-Signature_Anomaly-Detection/
 ├── output/                  # Figures
 ├── gutenberg/
 │   ├── metadata/metadata.csv
-│   ├── data/                # Put embedding_datasets.pkl here (or raw/text after pipeline)
+│   ├── data/                # embedding_datasets.pkl or raw/text after pipeline
 │   ├── get_data.py
 │   ├── process_data.py
 │   ├── data_download/
