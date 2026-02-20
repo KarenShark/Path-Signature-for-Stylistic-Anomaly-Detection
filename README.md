@@ -49,15 +49,6 @@ We treat **text as a path in embedding space** and use **path signatures** as fe
 
 Place the file at `gutenberg/data/embedding_datasets.pkl` after download.
 
-**Other options**:
-
-| Option | How | Notes |
-|--------|-----|-------|
-| **Zenodo** | Upload at [zenodo.org](https://zenodo.org); get DOI; add download link to README | Free, 50 GB/record, persistent DOI |
-| **Hugging Face Hub** | Create dataset repo; `huggingface-cli upload` | Free, good for ML datasets |
-| **Split + merge** | `split -b 500M embedding_datasets.pkl part_`; upload parts to Drive/Dropbox; provide `cat part_* > embedding_datasets.pkl` | Works with any cloud storage |
-| **Full pipeline** | Run get_data → process_data → compute_embeddings (GPU, ~hours) | No precomputed file needed |
-
 ---
 
 ## Full Pipeline (From Scratch)
@@ -131,64 +122,67 @@ Open `nlp_demo.ipynb`, set paths if needed, run all cells in order.
 
 **KNN accuracy (UMAP fidelity)**: ~0.955
 
-**ROC AUC (no_projection, Isolation Forest)**:
+**ROC AUC (no_projection, Isolation Forest)** — values read from `output/roc_dataset*_no_projection.png`:
 
 | Level | dataset0 | dataset1 | dataset2 | dataset3 |
 |-------|----------|----------|----------|----------|
-| 0     | 0.71     | 0.75     | 0.72     | 0.72     |
-| 1     | 0.74     | 0.73     | 0.74     | 0.74     |
-| 2     | 0.77     | 0.72     | 0.77     | 0.77     |
-| 3     | 0.77     | 0.74     | ~0.69*   | 0.84     |
+| 0     | 0.7127   | 0.7467   | 0.72     | 0.8185   |
+| 1     | 0.7415   | 0.7270   | 0.74     | 0.8161   |
+| 2     | 0.7675   | 0.7192   | 0.77     | 0.8239   |
+| 3     | 0.7730   | 0.7351   | 0.69     | 0.8424   |
 
-\*dataset2 at level 3: ~69% with 100 tokens vs. 92% with 250 tokens.
+*dataset2 (K=100) is weaker than dataset3 (K=250) at level 3; notebook notes 92% vs 69% for 250 vs 100 tokens.
 
 ---
 
 ## Output Figures
 
-### token_frequencies.png
+### 1. token_frequencies.png
 
-**What it shows**: Ranked token frequencies in the training corpus (Top 250).
-
-**Interpretation**: Zipf-like distribution; the steep drop justifies using Top‑K masking. Tokens beyond ~100–250 add little signal.
+Ranked token frequencies in the training corpus (Top 250). Zipf-like distribution; steep drop justifies Top‑K masking.
 
 ![Token Frequencies](output/token_frequencies.png)
 
 ---
 
-### encodings_dataset1_umap.png
+### 2. encodings_dataset1_umap.png
 
-**What it shows**: 2D UMAP projection of stream embeddings (dataset1: K=100, UMAP 2d). Points are colored by the dominant token at each position.
-
-**Interpretation**: Same-token points cluster; UMAP preserves local structure. KNN accuracy ~0.955 indicates good fidelity. This supports using path signatures on these projections.
+2D UMAP projection of stream embeddings (dataset1: K=100, UMAP 2d). Points colored by dominant token. Same-token points cluster; KNN fidelity ~0.955.
 
 ![UMAP Encodings Dataset1](output/encodings_dataset1_umap.png)
 
 ---
 
-### encodings_dataset2_random_proj.png
+### 3. encodings_dataset2_random_proj.png
 
-**What it shows**: 2D Random Projection of stream embeddings (dataset2: K=100, RP 2d). Same coloring as above.
-
-**Interpretation**: RP is linear and cheaper than UMAP; structure is noisier. Serves as a baseline to compare with UMAP.
+2D Random Projection of stream embeddings (dataset2: K=100, RP 2d). Same coloring. RP is cheaper than UMAP; structure noisier.
 
 ![Random Projection Encodings Dataset2](output/encodings_dataset2_random_proj.png)
 
 ---
 
-### roc_dataset0_no_projection.png … roc_dataset3_no_projection.png
+### 4. ROC curves (dataset0–3)
 
-**What they show**: ROC curves for each dataset at signature levels 1–4. X-axis: false positive rate; Y-axis: true positive rate. Each subplot = one level; legend shows IsoFor (Isolation Forest) AUC.
+Each figure: ROC curves at signature levels 0–3 (subplots). X=FPR, Y=TPR. Legend shows IsoFor AUC. Higher AUC = better impostor vs normal separation.
 
-**Interpretation**: Higher AUC = better impostor vs. normal separation. dataset3 (RP, K=250, 4d) reaches ~0.84 at level 3; dataset2 (RP, K=100) is weaker (~0.69) due to fewer tokens. Level 3 often outperforms level 1–2; level 4 can overfit.
+| Figure | Config | Top-K | Reduction | Dim |
+|--------|--------|-------|-----------|-----|
+| roc_dataset0_no_projection.png | dataset0 | 250 | UMAP | 4 |
+| roc_dataset1_no_projection.png | dataset1 | 100 | UMAP | 2 |
+| roc_dataset2_no_projection.png | dataset2 | 100 | Random Projection | 2 |
+| roc_dataset3_no_projection.png | dataset3 | 250 | Random Projection | 4 |
 
-![ROC Dataset0](output/roc_dataset0_no_projection.png)
+![ROC Dataset0](output/roc_dataset0_no_projection.png)  
+*dataset0: UMAP K=250, 4d*
 
-![ROC Dataset1](output/roc_dataset1_no_projection.png)
+![ROC Dataset1](output/roc_dataset1_no_projection.png)  
+*dataset1: UMAP K=100, 2d*
 
-![ROC Dataset2](output/roc_dataset2_no_projection.png)
+![ROC Dataset2](output/roc_dataset2_no_projection.png)  
+*dataset2: Random Projection K=100, 2d*
 
-![ROC Dataset3](output/roc_dataset3_no_projection.png)
+![ROC Dataset3](output/roc_dataset3_no_projection.png)  
+*dataset3: Random Projection K=250, 4d*
 
 ---
 
