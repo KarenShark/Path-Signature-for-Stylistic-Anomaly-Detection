@@ -4,13 +4,46 @@
 
 ---
 
+## Contents
+
+- [What This Experiment Does](#what-this-experiment-does-summary)
+- [Quick Start (Precomputed Data)](#quick-start-precomputed-data)
+- [Precomputed Data Options](#precomputed-data-options)
+- [Full Pipeline (From Scratch)](#full-pipeline-from-scratch)
+- [Experiment Details](#experiment-details)
+- [Reproduced Results](#reproduced-results)
+- [Output Figures](#output-figures)
+- [Project Structure](#project-structure)
+- [References](#references)
+
+---
+
 ## What This Experiment Does (Summary)
 
-We treat **text as a path in embedding space** and use **path signatures** as features for anomaly detection. The task: given a book, decide if it was written by a known author (normal) or by Margaret Oliphant (impostor, held out from training).
+**Task**: Given a book, classify as **normal** (known authors) or **impostor** (Margaret Oliphant, held out).
 
-**Pipeline**: (1) RoBERTa encodes each book’s middle 10 chunks (512 tokens each) → 1024‑dim stream embeddings. (2) We mask to the Top‑K most frequent tokens (K=100 or 250) and reduce dimension with UMAP or Random Projection to 2d/4d. (3) Each chunk becomes a path; we compute path signatures at levels 1–4. (4) Isolation Forest is trained on normal signatures; KS test aggregates scores per book; ROC AUC measures impostor vs. normal separation.
+### Pipeline (ML perspective)
 
-**Four configs**: dataset0 (UMAP, K=250, 4d), dataset1 (UMAP, K=100, 2d), dataset2 (Random Projection, K=100, 2d), dataset3 (Random Projection, K=250, 4d). We compare UMAP vs Random Projection and K=100 vs K=250.
+![Pipeline Overview](output/pipeline_overview.svg)
+
+| Stage | Input | Output |
+|-------|-------|--------|
+| **Data** | PG books | 10 chunks x 512 tokens per book |
+| **Embeddings** | Chunks | RoBERTa to (512, 1024) stream |
+| **Projection** | Stream | UMAP/RP to 2d or 4d path |
+| **Features** | Path | Path signature (levels 1-4) |
+| **Train** | Normal signatures | Isolation Forest |
+| **Eval** | Impostor + normal | ROC AUC |
+
+
+### Configs
+
+| Config | Top-K | Projection | Dim |
+|--------|-------|------------|-----|
+| dataset0 | 250 | UMAP | 4 |
+| dataset1 | 100 | UMAP | 2 |
+| dataset2 | 100 | Random Projection | 2 |
+| dataset3 | 250 | Random Projection | 4 |
 
 ---
 
@@ -122,16 +155,16 @@ Open `nlp_demo.ipynb`, set paths if needed, run all cells in order.
 
 **KNN accuracy (UMAP fidelity)**: ~0.955
 
-**ROC AUC (no_projection, Isolation Forest)** — values read from `output/roc_dataset*_no_projection.png`:
+**ROC AUC (no_projection, Isolation Forest)** — from `output/roc_auc_metrics.json`:
 
 | Level | dataset0 | dataset1 | dataset2 | dataset3 |
 |-------|----------|----------|----------|----------|
-| 0     | 0.7127   | 0.7467   | 0.72     | 0.8185   |
-| 1     | 0.7415   | 0.7270   | 0.74     | 0.8161   |
-| 2     | 0.7675   | 0.7192   | 0.77     | 0.8239   |
-| 3     | 0.7730   | 0.7351   | 0.69     | 0.8424   |
+| 1     | 0.8185   | 0.7127   | 0.3473   | 0.7467   |
+| 2     | 0.8161   | 0.7415   | 0.3510   | 0.7270   |
+| 3     | 0.8239   | 0.7675   | 0.3429   | 0.7192   |
+| 4     | 0.8424   | 0.7730   | 0.3551   | 0.7351   |
 
-*dataset2 (K=100) is weaker than dataset3 (K=250) at level 3; notebook notes 92% vs 69% for 250 vs 100 tokens.
+*dataset0 (UMAP, K=250, 4d) has the highest AUC; dataset2 (RP, K=100, 2d) is weakest (~0.35).
 
 ---
 
@@ -163,7 +196,7 @@ Ranked token frequencies in the training corpus (Top 250). Zipf-like distributio
 
 ### 4. ROC curves (dataset0–3)
 
-Each figure: ROC curves at signature levels 0–3 (subplots). X=FPR, Y=TPR. Legend shows IsoFor AUC. Higher AUC = better impostor vs normal separation.
+Each figure: ROC curves at signature levels 1–4 (subplots). X=FPR, Y=TPR. Legend shows IsoFor AUC. Higher AUC = better impostor vs normal separation.
 
 | Figure | Config | Top-K | Reduction | Dim |
 |--------|--------|-------|-----------|-----|

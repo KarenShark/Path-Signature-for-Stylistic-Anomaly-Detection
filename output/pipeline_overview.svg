@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 220" font-family="sans-serif">
+  <defs>
+    <style>
+      .box { fill: #E3F2FD; stroke: #1976D2; stroke-width: 2; rx: 8; }
+      .box2 { fill: #E8F5E9; stroke: #388E3C; stroke-width: 2; rx: 8; }
+      .box3 { fill: #FFF3E0; stroke: #F57C00; stroke-width: 2; rx: 8; }
+      .box4 { fill: #F3E5F5; stroke: #7B1FA2; stroke-width: 2; rx: 8; }
+      .title { font-weight: bold; font-size: 14px; fill: #212121; }
+      .item { font-size: 11px; fill: #424242; }
+      .arrow { stroke: #616161; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#616161"/>
+    </marker>
+  </defs>
+  <rect x="20" y="40" width="180" height="140" class="box"/>
+  <text x="110" y="70" text-anchor="middle" class="title">Data</text>
+  <text x="110" y="95" text-anchor="middle" class="item">Raw text .txt</text>
+  <text x="110" y="115" text-anchor="middle" class="item">Tokenize to 512/chunk</text>
+  <text x="110" y="135" text-anchor="middle" class="item">RoBERTa to (512,1024)</text>
+  <line x1="210" y1="110" x2="250" y2="110" class="arrow"/>
+  <rect x="260" y="40" width="180" height="140" class="box2"/>
+  <text x="350" y="70" text-anchor="middle" class="title">Feature Extraction</text>
+  <text x="350" y="95" text-anchor="middle" class="item">Top-K token mask</text>
+  <text x="350" y="115" text-anchor="middle" class="item">UMAP / RP to 2d/4d</text>
+  <text x="350" y="135" text-anchor="middle" class="item">Path signature L1-4</text>
+  <line x1="450" y1="110" x2="490" y2="110" class="arrow"/>
+  <rect x="500" y="40" width="160" height="140" class="box3"/>
+  <text x="580" y="70" text-anchor="middle" class="title">Training</text>
+  <text x="580" y="100" text-anchor="middle" class="item">Isolation Forest</text>
+  <text x="580" y="120" text-anchor="middle" class="item">on normal only</text>
+  <line x1="670" y1="110" x2="710" y2="110" class="arrow"/>
+  <rect x="720" y="40" width="160" height="140" class="box4"/>
+  <text x="800" y="70" text-anchor="middle" class="title">Evaluation</text>
+  <text x="800" y="100" text-anchor="middle" class="item">KS test per book</text>
+  <text x="800" y="120" text-anchor="middle" class="item">ROC AUC</text>
+</svg>
