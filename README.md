@@ -2,8 +2,6 @@
 
 **Author anomaly detection** on Project Gutenberg: given a text, determine whether it was written by an author seen in training or by an unseen "impostor." Uses **RoBERTa stream embeddings** → **UMAP/Random Projection** → **Path Signatures** → **Isolation Forest**.
 
-**Reference**: [Sequential-Path-Signature-Neural-Network](https://github.com/KarenShark/Sequential-Path-Signature-Neural-Network)
-
 ---
 
 ## Contents
@@ -63,7 +61,12 @@ python process_data.py    # Strip headers, tokenize → text/, tokens/, counts/
 
 ### 4. Optional: Precomputed datasets
 
-If `gutenberg/data/embedding_datasets.pkl` exists, the notebook can load it to skip dataset construction.
+`embedding_datasets.pkl` (~14 GB) cannot be hosted on GitHub. **Download from Zenodo**:
+
+- **URL**: https://zenodo.org/record/18710797
+- **DOI**: 10.5281/zenodo.18710797
+
+Place the file at `gutenberg/data/embedding_datasets.pkl` after download. The notebook will load it to skip dataset construction.
 
 ---
 
