@@ -203,7 +203,7 @@ raw (.txt) → text (.txt) → compute_embeddings (RoBERTa) → embeddings zarr
 ## Project Structure
 
 ```
-Path-Signature_Anomaly-Detection/
+natural_language_processing/
 ├── nlp_demo.ipynb
 ├── requirements.txt
 ├── requirements_torch.txt
