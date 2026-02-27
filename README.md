@@ -8,6 +8,26 @@
 
 ---
 
+## Contents
+
+- [Overview](#overview)
+- [Technical Route](#technical-route)
+- [Data Flow (7 Stages)](#data-flow-7-stages)
+- [Key Design Choices](#key-design-choices)
+- [Results](#results)
+- [Installation](#installation)
+- [Data](#data)
+- [Usage](#usage)
+- [Experiment Configurations](#experiment-configurations)
+- [Figures](#figures)
+- [Project Structure](#project-structure)
+- [Data Flow & Drop Statistics](#data-flow--drop-statistics)
+- [Citation](#citation)
+- [References](#references)
+- [License](#license)
+
+---
+
 ![Pipeline Overview](output/pipeline_overview.svg)
 
 ---
